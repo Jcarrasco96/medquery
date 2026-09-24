@@ -1,0 +1,12 @@
+127.0.0.1 {
+    encode zstd br gzip
+
+    route {
+        #        @js path *.js
+        #        rewrite @js /js-minify.php?file={http.request.uri.path}
+
+        php_server
+    }
+}
+
+# frankenphp run --config .\Caddyfile

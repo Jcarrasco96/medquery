@@ -1,0 +1,16 @@
+.idea
+.idea_modules/
+
+/database/
+/runtime/
+/vendor/
+
+/config/web.local.php
+/config/web.local-laptop.php
+
+/assets/css/*.min.css
+/assets/css/*.min.css.map
+/assets/js/*.min.js
+/assets/js/*.min.js.map
+
+adminer-6.1.0-mysql-en.php

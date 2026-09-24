@@ -1,0 +1,36 @@
+{
+  "name": "jcarr/medquery",
+  "version": "1.0.0",
+  "autoload": {
+    "psr-4": {
+      "app\\": "./"
+    }
+  },
+  "authors": [
+    {
+      "name": "Jesus Carrasco",
+      "email": "jcarrasco96@outlook.com"
+    }
+  ],
+  "require": {
+    "ext-ctype": "*",
+    "ext-curl": "*",
+    "ext-dom": "*",
+    "ext-libxml": "*",
+    "ext-mbstring": "*",
+    "ext-openssl": "*",
+    "ext-pdo": "*",
+    "firebase/php-jwt": "7.0.5",
+    "phpmailer/phpmailer": "^7.0",
+    "ramsey/uuid": "^4.8",
+    "spipu/html2pdf": "^5.3"
+  },
+  "require-dev": {
+    "fakerphp/faker": "^1.24"
+  },
+  "config": {
+    "allow-plugins": {
+      "*": true
+    }
+  }
+}
