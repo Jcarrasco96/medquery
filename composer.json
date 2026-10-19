@@ -1,36 +1,52 @@
 {
   "name": "jcarr/medquery",
+  "description": "Simplifying Medicaid Data Access",
   "version": "1.0.0",
+  "type": "project",
+  "homepage": "https://medquery.cmhps.org",
+  "authors": [
+    {
+      "name": "Jesus Carrasco",
+      "email": "jcarrasco96@outlook.com",
+      "homepage": "https://jcarrasco96.com/"
+    }
+  ],
+  "support": {
+    "email": "medquery@jcarrasco96.com",
+    "issues": "https://github.com/Jcarrasco96/medquery/issues",
+    "forum": "https://github.com/Jcarrasco96/medquery/discussions",
+    "source": "https://github.com/Jcarrasco96/medquery/"
+  },
+  "require": {
+    "ext-ctype": "*",
+    "ext-curl": "*",
+    "ext-dom": "*",
+    "ext-gd": "*",
+    "ext-libxml": "*",
+    "ext-mbstring": "*",
+    "ext-openssl": "*",
+    "ext-pdo": "*",
+    "dompdf/dompdf": "^3.1",
+    "firebase/php-jwt": "7.0.5",
+    "masterminds/html5": "^2.11",
+    "phpmailer/phpmailer": "^7.0",
+    "ramsey/uuid": "^4.8",
+    "spipu/html2pdf": "^5.3",
+    "tecnickcom/tc-lib-pdf": "^8.78"
+  },
+  "require-dev": {
+    "fakerphp/faker": "^1.24",
+    "phpstan/phpstan": "^2.3"
+  },
   "autoload": {
     "psr-4": {
       "app\\": "./"
     }
   },
-  "authors": [
-    {
-      "name": "Jesus Carrasco",
-      "email": "jcarrasco96@outlook.com"
-    }
-  ],
-  "require": {
-    "ext-ctype": "*",
-    "ext-curl": "*",
-    "ext-dom": "*",
-    "ext-libxml": "*",
-    "ext-mbstring": "*",
-    "ext-openssl": "*",
-    "ext-pdo": "*",
-    "firebase/php-jwt": "7.0.5",
-    "phpmailer/phpmailer": "^7.0",
-    "ramsey/uuid": "^4.8",
-    "spipu/html2pdf": "^5.3"
-  },
-  "require-dev": {
-    "fakerphp/faker": "^1.24"
-  },
   "config": {
     "allow-plugins": {
       "*": true
-    }
+    },
+    "disable-tls": true
   }
 }

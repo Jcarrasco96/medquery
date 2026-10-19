@@ -7,9 +7,7 @@ namespace app\core\services;
 final class Pagination
 {
 
-    public int $page;
-
-    public function __construct(int $page, public int $pageSize, public int $total)
+    public function __construct(public int $page, public int $pageSize, public int $total, public string $order)
     {
         $this->page = max(0, $page);
     }

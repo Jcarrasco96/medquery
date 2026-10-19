@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace app\utils\medicaid;
 
 use CurlHandle;
@@ -23,15 +25,10 @@ final class HttpClient
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true,
 
-            // Persistent session
             CURLOPT_COOKIEFILE => $this->cookieFile,
             CURLOPT_COOKIEJAR => $this->cookieFile,
 
-            CURLOPT_USERAGENT =>
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                . 'AppleWebKit/537.36 '
-                . '(KHTML, like Gecko) '
-                . 'Chrome/140.0 Safari/537.36',
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36 Avast/152.0.0.0',
 
             CURLOPT_ENCODING => '',
 
@@ -53,24 +50,13 @@ final class HttpClient
             CURLOPT_URL => $url,
             CURLOPT_HTTPGET => true,
             CURLOPT_POST => false,
-            CURLOPT_POSTFIELDS => null,
+            //CURLOPT_POSTFIELDS => null,
         ]);
 
         return $this->execute();
     }
 
-    public function post(string $url, array $data): string
-    {
-        curl_setopt_array($this->curl, [
-            CURLOPT_URL => $url,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => http_build_query($data),
-        ]);
-
-        return $this->execute();
-    }
-
-    public function postReferer(string $url, array $data, ?string $referer = null): string {
+    public function post(string $url, array $data, ?string $referer = null): string {
         $headers = [
             'Content-Type: application/x-www-form-urlencoded',
             'Accept: text/html,application/xhtml+xml',
@@ -85,6 +71,8 @@ final class HttpClient
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => http_build_query($data),
             CURLOPT_HTTPHEADER => $headers,
+
+            CURLOPT_VERBOSE => true,
         ]);
 
         return $this->execute();

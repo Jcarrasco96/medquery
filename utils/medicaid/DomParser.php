@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace app\utils\medicaid;
 
 use DOMDocument;
@@ -9,18 +11,22 @@ use DOMNode;
 use DOMXPath;
 use RuntimeException;
 
-class DomParser
+final class DomParser
 {
 
     private DOMXPath $xpath;
 
     public function __construct(string $html)
     {
+
         libxml_use_internal_errors(true);
 
         $document = new DOMDocument();
 
-        if (!$document->loadHTML($html)) {
+//        $loaded = $document->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        $loaded = $document->loadHTML($html);
+
+        if (!$loaded) {
             throw new RuntimeException('Unable to parse page.');
         }
 
@@ -29,7 +35,7 @@ class DomParser
 
     public function findFormFields(): array
     {
-        $form = $this->xpath->query('//form')->item(0);
+        $form = $this->firstForm();
 
         if (!$form instanceof DOMElement) {
             throw new RuntimeException('Form not found.');
@@ -232,6 +238,21 @@ class DomParser
         }
 
         return $node->getAttribute('value');
+    }
+
+    public function isRecipientProcedureLookupPage(): bool
+    {
+        foreach ($this->xpath->query('//h2') as $heading) {
+            if (!$heading instanceof DOMElement) {
+                continue;
+            }
+
+            if (trim($heading->textContent) === 'Recipient Procedure Lookup') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
 }

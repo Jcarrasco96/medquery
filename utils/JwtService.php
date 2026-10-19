@@ -13,8 +13,6 @@ use stdClass;
 final class JwtService
 {
 
-    private const string KEY = 'CAMBIA_ESTO_POR_UN_SECRET_LARGO1';
-
     public function create(User $user): string
     {
         $time = time();
@@ -29,12 +27,17 @@ final class JwtService
             'email' => $user->email,
         ];
 
-        return JWT::encode($payload, self::KEY, 'HS256');
+        return JWT::encode($payload, App::$config['jwt_secret'], 'HS256');
     }
 
-    public function decode(string $token): stdClass
+    public static function decode(string $token): stdClass
     {
-        return JWT::decode($token, new Key(self::KEY, 'HS256'));
+        return JWT::decode($token, new Key(App::$config['jwt_secret'], 'HS256'));
+    }
+
+    public static function encode(array $payload): string
+    {
+        return JWT::encode($payload, App::$config['jwt_secret'], 'HS256');
     }
 
 }

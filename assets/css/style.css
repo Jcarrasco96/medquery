@@ -76,6 +76,23 @@ main > .container-fluid {
     --bs-btn-active-border-color: #5a23c8;
 }
 
+.bg-teal {
+    background-color: rgba(0, 191, 165, 1) !important;
+}
+
+.btn-bd-teal {
+    --bs-btn-color: #212529;
+    --bs-btn-bg: rgb(0, 191, 165);
+    --bs-btn-border-color: rgb(0, 191, 165);
+    --bs-btn-hover-color: #212529;
+    --bs-btn-hover-bg: rgb(38, 166, 154);
+    --bs-btn-hover-border-color: rgb(38, 166, 154);
+    --bs-btn-focus-shadow-rgb: rgb(100, 255, 218);
+    --bs-btn-active-color: #212529;
+    --bs-btn-active-bg: rgb(0, 137, 123);
+    --bs-btn-active-border-color: rgb(0, 137, 123);
+}
+
 /*.nav-link.active {*/
 /*    border: 1px solid #5a23c8;*/
 /*    background-color: #6528e0;*/
@@ -241,4 +258,12 @@ main > .container-fluid {
 
 .mw-50 {
     min-width: 50px;
+}
+
+#loading-indicator {
+    display: none;
+    position: fixed;
+    top: 70px;
+    right: 15px;
+    z-index: 1060;
 }

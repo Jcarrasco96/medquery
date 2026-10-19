@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace app\core\database\query;
 
 use app\core\database\RawExpression;
+use app\utils\debugger\collector\DatabaseCollector;
 use InvalidArgumentException;
 use PDO;
 
-class SelectSafeQuery extends SafeQuery
+final class SelectSafeQuery extends SafeQuery
 {
 
     private ?int $limit = null;
@@ -16,7 +17,7 @@ class SelectSafeQuery extends SafeQuery
     private array $orderBy = [];
     private array $groupBy = [];
 
-    public function data(array $data = ['*']): self
+    public function data(array $data = ['*']): SelectSafeQuery
     {
         if (in_array('*', $data, true)) {
             $this->data = ['*'];
@@ -38,7 +39,7 @@ class SelectSafeQuery extends SafeQuery
         return $this;
     }
 
-    public function orderBy(string $column, string $direction = 'ASC'): self
+    public function orderBy(string $column, string $direction = 'ASC'): SelectSafeQuery
     {
         $this->validateIdentifier($column);
         $direction = strtoupper($direction);
@@ -49,20 +50,20 @@ class SelectSafeQuery extends SafeQuery
         return $this;
     }
 
-    public function groupBy(string $column): self
+    public function groupBy(string $column): SelectSafeQuery
     {
         $this->validateIdentifier($column);
         $this->groupBy[] = "`$column`";
         return $this;
     }
 
-    public function limit(int $limit): self
+    public function limit(int $limit): SelectSafeQuery
     {
         $this->limit = max(0, $limit);
         return $this;
     }
 
-    public function offset(int $offset): self
+    public function offset(int $offset): SelectSafeQuery
     {
         $this->offset = max(0, $offset);
         return $this;
@@ -70,6 +71,8 @@ class SelectSafeQuery extends SafeQuery
 
     public function execute(): array
     {
+        $start = hrtime(true);
+
         $sql = $this->getSql();
 
         $stmt = $this->pdo->prepare($sql);
@@ -84,10 +87,12 @@ class SelectSafeQuery extends SafeQuery
 
         $stmt->execute();
 
+        DatabaseCollector::record($sql, (hrtime(true) - $start) / 1_000_000, $this->params);
+
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function applyQueryParams(array $params): self
+    public function applyQueryParams(array $params): SelectSafeQuery
     {
         if (!empty($params['order'])) {
             $orders = explode(',', $params['order']);
@@ -105,7 +110,7 @@ class SelectSafeQuery extends SafeQuery
             }
 
             $page = max(1, (int)$params['page']);
-            $offset = (($params['limit'] ?? 10) * ($page - 1));
+            $offset = (($params['limit']) * ($page - 1));
             $this->offset((int)$offset);
         }
 
@@ -119,6 +124,8 @@ class SelectSafeQuery extends SafeQuery
 
     public function exists(): bool
     {
+        $start = hrtime(true);
+
         $this->validateTable();
 
         $sql = "SELECT 1 FROM `$this->table`";
@@ -132,11 +139,15 @@ class SelectSafeQuery extends SafeQuery
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($this->params);
 
+        DatabaseCollector::record($sql, (hrtime(true) - $start) / 1_000_000, $this->params);
+
         return (bool) $stmt->fetchColumn();
     }
 
     public function count(): int
     {
+        $start = hrtime(true);
+
         $this->validateTable();
 
         $sql = "SELECT COUNT(*) FROM `$this->table`";
@@ -147,6 +158,8 @@ class SelectSafeQuery extends SafeQuery
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($this->params);
+
+        DatabaseCollector::record($sql, (hrtime(true) - $start) / 1_000_000, $this->params);
 
         return (int) $stmt->fetchColumn();
     }

@@ -3,7 +3,7 @@
 
 declare(strict_types=1);
 
-use app\core\database\Migrator;
+use app\core\database\migration\Migrator;
 use app\core\helpers\ArrayHelper;
 
 include 'vendor/autoload.php';
@@ -24,8 +24,7 @@ if (!is_dir(MIGRATION_PATH)) {
 
 $config = ArrayHelper::merge(
     require_once BASE_PATH . 'config/web.php',
-//    require_once BASE_PATH . 'config/web.local.php',
-    require_once BASE_PATH . 'config/web.local-laptop.php',
+    require_once BASE_PATH . 'config/_web-local.php',
 );
 
 $migrator = new Migrator($config['db'], MIGRATION_PATH);
@@ -50,7 +49,7 @@ switch ($command) {
 
         namespace app\migrations;
         
-        use app\core\database\Migration;
+        use app\core\database\migration\Migration;
         
         class $file extends Migration
         {

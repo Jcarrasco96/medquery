@@ -24,16 +24,25 @@ abstract class SafeQuery
         $this->pdo = Database::load(App::$config['db']);
     }
 
-    public function data(array $data): self
+    public function data(array $data = ['*']): static
     {
+        if (in_array('*', $data, true)) {
+            $this->data = ['*'];
+            return $this;
+        }
+
         foreach ($data as $col => $val) {
+            if (!is_string($col)) {
+                throw new InvalidArgumentException('Column names must be strings instance.');
+            }
+
             $this->validateIdentifier($col);
             $this->data[$col] = $val;
         }
         return $this;
     }
 
-    public function from(string $table): self
+    public function from(string $table): static
     {
         if (!preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
             throw new InvalidArgumentException("Invalid name of table: $table");
@@ -42,12 +51,12 @@ abstract class SafeQuery
         return $this;
     }
 
-    public function where(string $column, mixed $value): self
+    public function where(string $column, mixed $value): static
     {
         return $this->whereAdvanced($column, '=', $value);
     }
 
-    public function whereAdvanced(string $column, string $operator, mixed $value): self
+    public function whereAdvanced(string $column, string $operator, mixed $value): static
     {
         $this->validateIdentifier($column);
 
@@ -62,7 +71,7 @@ abstract class SafeQuery
         return $this;
     }
 
-    public function whereGroup(callable $callback, string $join = 'OR'): self
+    public function whereGroup(callable $callback, string $join = 'OR'): static
     {
         $join = strtoupper($join) === 'AND' ? 'AND' : 'OR';
         $conditions = [];

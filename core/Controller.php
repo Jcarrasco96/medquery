@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace app\core;
 
 use app\core\exceptions\ForbiddenHttpException;
-use app\core\exceptions\ServerErrorHttpException;
 use app\core\exceptions\TooManyRequestsHttpException;
+use app\core\helpers\Url;
 use app\core\services\Renderer;
 use app\core\services\Response;
 use app\core\widgets\Alert;
@@ -75,24 +75,8 @@ class Controller
         if (!$allowAction) {
             throw new ForbiddenHttpException('You do not have permission to access this page.');
         }
-
-        if (App::$session->isAuthenticated()) {
-            // reset roles
-            $selectedRole = App::$session->getSelectedRole();
-            $roles = App::$session->roles();
-
-            if (empty($roles)) {
-                App::$session->clearSelectedRole();
-            } elseif (!App::$session->can($selectedRole)) {
-                $selectedRole = array_shift($roles);
-                App::$session->setSelectedRole($selectedRole);
-            }
-        }
     }
 
-    /**
-     * @throws ServerErrorHttpException
-     */
     protected function render(string $view, array $data = []): string
     {
         if (!isset($data['execTime'])) {
@@ -112,9 +96,6 @@ class Controller
         return $renderer->render($view, $data, $this->layout);
     }
 
-    /**
-     * @throws ServerErrorHttpException
-     */
     protected function renderPartial(string $view, array $data = []): string
     {
         if (!isset($data['execTime'])) {
@@ -143,7 +124,6 @@ class Controller
     public function createAction($methodName, $params = []): string|array|Response
     {
         App::$request->setRouteParams($params);
-
         App::$session->startSession();
 
         $this->beforeAction($methodName);
@@ -158,7 +138,7 @@ class Controller
     protected function loadStyle(string $cssFile, array $attributes = []): void
     {
         $this->styles[] = [
-            'file' => $cssFile,
+            'file' => Url::to($cssFile),
             'attributes' => $attributes
         ];
     }
@@ -166,7 +146,7 @@ class Controller
     protected function loadScript(string $jsFile, array $attributes = [], bool $inHead = false): void
     {
         $scriptData = [
-            'file' => $jsFile,
+            'file' => Url::to($jsFile),
             'attributes' => $attributes
         ];
 

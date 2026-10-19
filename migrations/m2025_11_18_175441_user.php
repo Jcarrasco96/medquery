@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace app\migrations;
 
-use app\core\database\Migration;
+use app\core\database\migration\Migration;
+use app\core\database\migration\Seeder;
 use app\core\services\Security;
 use Exception;
 use Ramsey\Uuid\Uuid;
 
-class m2025_11_18_175441_user extends Migration
+class m2025_11_18_175441_user extends Migration implements Seeder
 {
 
     public function up(): void
     {
         $this->db->exec("CREATE TABLE `user` (
-            `id` char(36) NOT NULL,
+            `id` char(36) NOT NULL PRIMARY KEY,
             `name` varchar(100) NOT NULL,
             `email` varchar(255) NOT NULL,
             `password` char(60) NOT NULL,
@@ -25,9 +26,16 @@ class m2025_11_18_175441_user extends Migration
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
 
         $this->db->exec("ALTER TABLE `user`
-            ADD PRIMARY KEY (`id`),
             ADD UNIQUE KEY `email` (`email`);");
+    }
 
+    public function down(): void
+    {
+        $this->db->exec("DROP TABLE `user`;");
+    }
+
+    public function seed(): void
+    {
         try {
             $authKey = Security::generateRandomString();
             $password = Security::generatePasswordHash($authKey . 'admin');
@@ -47,10 +55,4 @@ class m2025_11_18_175441_user extends Migration
             echo "Error creating user: " . $e->getMessage() . "\n";
         }
     }
-
-    public function down(): void
-    {
-        $this->db->exec("DROP TABLE `user`;");
-    }
-
 }

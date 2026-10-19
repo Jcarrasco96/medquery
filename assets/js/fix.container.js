@@ -14,7 +14,6 @@ function fixContainer() {
     objContainer.css('paddingTop', (divHeight - 40) + "px");
 }
 
-
 $(document).ready(function() {
     fixContainer();
 });

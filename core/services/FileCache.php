@@ -6,6 +6,7 @@ namespace app\core\services;
 
 use app\core\App;
 use Exception;
+use Random\RandomException;
 
 final class FileCache
 {
@@ -16,6 +17,7 @@ final class FileCache
     public int $directoryLevel = 1;
     public ?int $fileMode = null;
     public int $dirMode = 0775;
+    private int $gcProbability = 10;
 
     public function getValue(string $key): false|string
     {
@@ -39,8 +41,10 @@ final class FileCache
         return false;
     }
 
-    public function setValue(string $key, string $value, int $duration): bool
+    public function setValue(string $key, string $value, int $duration = 0): bool
     {
+        $this->gc();
+
         $cacheFile = $this->getCacheFile($key);
         if ($this->directoryLevel > 0) {
             try {
@@ -52,7 +56,6 @@ final class FileCache
         }
         // If ownership differs the touch call will fail, so we try to
         // rebuild the file from scratch by deleting it first
-        // https://github.com/yiisoft/yii2/pull/16120
         if (is_file($cacheFile) && function_exists('posix_geteuid') && fileowner($cacheFile) !== posix_geteuid()) {
             @unlink($cacheFile);
         }
@@ -121,6 +124,40 @@ final class FileCache
             return chmod($path, $mode);
         } catch (Exception $e) {
             throw new Exception("Failed to change permissions for directory \"$path\": " . $e->getMessage(), $e->getCode(), $e);
+        }
+    }
+
+    private function gc(): void
+    {
+        try {
+            if (random_int(0, 1000) < $this->gcProbability) {
+                $this->gcRecursive($this->cachePath);
+            }
+        } catch (RandomException $e) {
+            App::$logger->warning("Unable to random_int(0, 1000000): {$e->getMessage()}");
+        }
+    }
+
+    private function gcRecursive(string $cachePath): void
+    {
+        if (($handle = opendir($cachePath)) !== false) {
+            while (($file = readdir($handle)) !== false) {
+                if (strncmp($file, '.', 1) === 0) {
+                    continue;
+                }
+
+                $fullPath = $cachePath . DIRECTORY_SEPARATOR . $file;
+
+                if (is_dir($fullPath)) {
+                    $this->gcRecursive($fullPath);
+                } elseif (@filemtime($fullPath) < time()) {
+                    if (!@unlink($fullPath)) {
+                        $error = error_get_last();
+                        App::$logger->warning("Unable to remove file '$fullPath': {$error['message']}");
+                    }
+                }
+            }
+            closedir($handle);
         }
     }
 

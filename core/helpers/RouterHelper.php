@@ -6,7 +6,7 @@ namespace app\core\helpers;
 
 use Ramsey\Uuid\Uuid;
 
-class RouterHelper
+final class RouterHelper
 {
 
     public static function findConfiguredRoute(array $routes, string $method, string $path): array

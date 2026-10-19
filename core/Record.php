@@ -9,28 +9,12 @@ use app\core\database\query\SelectSafeQuery;
 abstract class Record extends Model
 {
 
-    public static function findById(string $id): ?static
+    public static function findById(int|string $id): ?static
     {
         $data = new SelectSafeQuery()
             ->from(static::tableName())
             ->data()
             ->where('id', $id)
-            ->limit(1)
-            ->execute();
-
-        if (empty($data)) {
-            return null;
-        }
-
-        return static::fromArray(array_shift($data));
-    }
-
-    public static function findByUserId(string $id): ?static
-    {
-        $data = new SelectSafeQuery()
-            ->from(static::tableName())
-            ->data()
-            ->where('user_id', $id)
             ->limit(1)
             ->execute();
 
@@ -54,5 +38,18 @@ abstract class Record extends Model
     }
 
     abstract protected static function tableName(): string;
+
+    public static function exists(string $field, string $value): bool
+    {
+        $data = new SelectSafeQuery()
+            ->from(static::tableName())
+            ->data()
+            ->where($field, $value)
+            ->limit(1)
+            ->execute();
+
+        return !empty($data);
+
+    }
 
 }

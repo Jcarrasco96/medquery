@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace app\core\database;
+namespace app\core\database\migration;
 
+use app\core\database\Database;
 use PDO;
 use ReflectionClass;
 use ReflectionException;
@@ -66,10 +67,20 @@ final class Migrator
             $ref = new ReflectionClass($class);
 
             try {
+                echo "Executing: $file\n";
+
                 $migration = $ref->newInstance($this->db);
                 $migration->up();
 
-                echo "Executing: $file\n";
+                if ($migration instanceof Seeder) {
+                    if ($this->askConfirmation("Do you want to run the seed?")) {
+                        echo "Running seed...\n";
+
+                        $migration->seed();
+                    } else {
+                        echo "Seed cancelled.\n";
+                    }
+                }
 
                 $stmt = $this->db->prepare("INSERT INTO migrations (migration, batch) VALUES (?,?)");
                 $stmt->execute([$file, $batch]);
@@ -106,16 +117,41 @@ final class Migrator
             $ref = new ReflectionClass($class);
 
             try {
+                echo "Reversing: $file\n";
+
                 $migration = $ref->newInstance($this->db);
                 $migration->down();
-
-                echo "Reversing: $file\n";
 
                 $del = $this->db->prepare("DELETE FROM migrations WHERE migration = ?");
                 $del->execute([$file]);
             } catch (ReflectionException $e) {
                 echo "Class $class cannot be instantiated.\n";
             }
+        }
+    }
+
+    private function askConfirmation(string $question, bool $default = true): bool
+    {
+        $options = $default ? '[Y/n]' : '[y/N]';
+
+        while (true) {
+            echo "$question $options: ";
+
+            $response = strtolower(trim(fgets(STDIN)));
+
+            if ($response === '') {
+                return $default;
+            }
+
+            if (in_array($response, ['y', 'yes'], true)) {
+                return true;
+            }
+
+            if (in_array($response, ['n', 'no'], true)) {
+                return false;
+            }
+
+            echo "Please, type Y o N.\n";
         }
     }
 

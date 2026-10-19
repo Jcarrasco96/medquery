@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace app\core\helpers;
 
-class Url
+final class Url
 {
 
     public static function to(string $path, array $query = []): string
@@ -43,6 +43,14 @@ class Url
         }
 
         return $url;
+    }
+
+    public static function isActiveUrl(string $url): bool
+    {
+        $currentUrl = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $targetUrl = parse_url($url, PHP_URL_PATH);
+
+        return rtrim($currentUrl, '/') === rtrim($targetUrl, '/');
     }
 
 }

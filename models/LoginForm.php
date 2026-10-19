@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace app\models;
 
 use app\core\App;
+use app\core\exceptions\ServerErrorHttpException;
 use app\core\Model;
 use app\core\validators\EmailValidator;
 use app\core\validators\RequiredValidator;
-use Exception;
 
 final class LoginForm extends Model
 {
@@ -32,7 +32,7 @@ final class LoginForm extends Model
     }
 
     /**
-     * @throws Exception
+     * @throws ServerErrorHttpException
      */
     public function login(): bool
     {
@@ -47,9 +47,7 @@ final class LoginForm extends Model
             return false;
         }
 
-        App::$session->removeCSRF();
-        App::$session->create($this->user->id, $this->user->email, $this->user->roles());
-        App::$user = $this->user;
+        App::$session->create($this->user);
         $this->logLoginAttempt($this->email);
 
         return true;

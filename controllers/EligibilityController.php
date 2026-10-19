@@ -8,201 +8,196 @@ use app\core\App;
 use app\core\Controller;
 use app\core\exceptions\BadRequestHttpException;
 use app\core\exceptions\ServerErrorHttpException;
-use app\utils\medicaid\EligibilityResultParser;
-use app\utils\medicaid\GenericForm;
+use app\core\helpers\Url;
+use app\core\Permission;
+use app\models\EligibilityForm;
+use app\models\FullEligibilityForm;
+use app\utils\JwtService;
 use app\utils\medicaid\HttpClient;
-use app\utils\medicaid\PageAnalysis;
 use app\utils\medicaid\PageAnalyzer;
-use app\utils\medicaid\PageState;
-use DateTime;
+use app\utils\MyEasyAjax;
+use DateMalformedStringException;
 use DateTimeImmutable;
-use RuntimeException;
 
-class EligibilityController extends Controller
+final class EligibilityController extends Controller
 {
 
     /**
      * @throws ServerErrorHttpException
      */
+    #[Permission(['@'])]
     public function actionIndex(): string
     {
-        return $this->render('index');
+        $model = new EligibilityForm();
+
+        $this->loadScript('assets/js/my-easy-jax.js');
+
+        App::$session->generateCSRF(true);
+
+        return $this->render('index', ['model' => $model]);
+    }
+
+    #[Permission(['@'])]
+    public function actionFullYear(): string
+    {
+        $model = new FullEligibilityForm();
+
+        $this->loadScript('assets/js/my-easy-jax.js');
+
+        App::$session->generateCSRF(true);
+
+        return $this->render('full-year', ['model' => $model]);
+    }
+
+    #[Permission(['@'])]
+    public function actionSearch(): array
+    {
+        $model = new EligibilityForm();
+
+        $model->load(App::$request->post());
+
+        if (!$model->validate()) {
+            return MyEasyAjax::instance()
+                ->contentReplace([
+                    '#formContent' => $this->renderPartial('_form', ['model' => $model]),
+                    '#eligibilityContent' => '',
+                ])
+                ->payload();
+        }
+
+        $client = new HttpClient('runtime/cookies/session.cookie');
+
+        try {
+            $page = PageAnalyzer::eligibilityPage($client);
+
+            $eligibility = $page->postSearch($client, $model->medicaid_id, $model->fromDateUS, $model->toDateUS)->parse();
+
+            $content = $this->renderPartial('_content', [
+                'eligibility' => $eligibility,
+                'url' => Url::to("eligibility/print", [
+                    'medicaid_id' => $model->medicaid_id,
+                    'from_date' => $model->from_date,
+                    'to_date' => $model->to_date,
+                ]),
+            ]);
+        } catch (BadRequestHttpException|ServerErrorHttpException $e) {
+            $content = '<code>' . $e->getMessage() . '</code>';
+        }
+
+        return MyEasyAjax::instance()
+            ->contentReplace([
+                '#formContent' => $this->renderPartial('_form', ['model' => $model,]),
+                '#eligibilityContent' => $content,
+            ])
+            ->payload();
+    }
+
+    #[Permission(['@'])]
+    public function actionSearchFullYear(): array
+    {
+        $model = new FullEligibilityForm();
+
+        $model->load(App::$request->post());
+
+        if (!$model->validate()) {
+            return MyEasyAjax::instance()
+                ->contentReplace([
+                    '#formContent' => $this->renderPartial('_form-full-year', ['model' => $model]),
+                    '#eligibilityContent' => '',
+                ])
+                ->payload();
+        }
+
+        try {
+            list($monthlyResults, $eligibility) = $this->monthlyResults($model->medicaid_id);
+
+            $content = $this->renderPartial('_full-year-content', [
+                'medicaid' => $model->medicaid_id,
+                'monthlyResults' => $monthlyResults,
+                'eligibility' => $eligibility,
+            ]);
+        } catch (DateMalformedStringException|BadRequestHttpException|ServerErrorHttpException $e) {
+            $content = '<code>' . $e->getMessage() . '</code>';
+        }
+
+        return MyEasyAjax::instance()
+            ->contentReplace([
+                '#formContent' => $this->renderPartial('_form-full-year', ['model' => $model]),
+                '#eligibilityContent' => $content,
+            ])
+            ->payload();
     }
 
     /**
      * @throws ServerErrorHttpException
+     * @throws BadRequestHttpException
      */
-    public function actionSearch(): string
+    #[Permission(['@'])]
+    public function actionPrint(string $token): array|string
     {
+        $model = new EligibilityForm();
+
+        $tokenDecoded = JwtService::decode($token);
+
+        $model->load($tokenDecoded);
+
+        if (!$model->validate()) {
+            return '<code>ERROR!</code>';
+        }
+
         $client = new HttpClient('runtime/cookies/session.cookie');
 
-        $url = 'https://portal.flmmis.com/FLPortal/Eligibility/tabId/68/Default.aspx';
+        $page = PageAnalyzer::eligibilityPage($client);
 
-        $html = $client->get($url);
+        list($title, $content) = $page->postSearch($client, $model->medicaid_id, $model->fromDateUS, $model->toDateUS)->eligibilityTable();
 
-        $attempts = 0;
-        $maxAttempts = 3;
-
-        $analyzer = new PageAnalyzer($html);
-        $analysis = $analyzer->analyze($client->url());
-
-        while ($analysis->state != PageState::ELIGIBILITY) {
-
-            App::$logger->notice('PAGE STATUS: ' . $analysis->state->value);
-
-            switch ($analysis->state) {
-                case PageState::INCORRECT_CREDENTIALS:
-                    throw new BadRequestHttpException('Incorrect user ID or password.');
-
-                case PageState::LOGIN:
-                    $analysis = $this->loginFLMedicaid($client, $analysis->form);
-
-                    break;
-
-                case PageState::SAML_POST:
-                    $analysis = $this->processSaml($client, $analysis->form);
-
-                    break;
-
-                case PageState::SESSION_EXPIRED:
-                    $client->clearCookies();
-
-                    throw new ServerErrorHttpException('Session expired. Cookie deleted. Reload page.');
-
-                default:
-                    $html = $client->get($url);
-
-                    $analyzer = new PageAnalyzer($html);
-                    $analysis = $analyzer->analyze($client->url());
-
-                    break;
-            }
-
-            $attempts++;
-
-            if ($attempts > $maxAttempts) {
-                throw new ServerErrorHttpException('Too many attempts.');
-            }
-        }
-
-        $eligibilityForm = new GenericForm($html);
-
-        $medicaid = App::$request->post('medicaid_id');
-        $fromDateOriginal = App::$request->post('from_date');
-        $toDateOriginal = App::$request->post('to_date');
-
-        $fDate = DateTime::createFromFormat('Y-m-d', $fromDateOriginal);
-        $fromDate = $fDate->format('m/d/Y');
-
-        if ($toDateOriginal) {
-            $tDate = DateTime::createFromFormat('Y-m-d', $toDateOriginal);
-            $toDate = $tDate->format('m/d/Y');
-        } else {
-            $toDate = null;
-        }
-
-        $fields = $eligibilityForm->eligibilityWithSearchCriteria($medicaid, $fromDate, $toDate);
-
-        $result = $client->postReferer(PageAnalyzer::absoluteUrl($eligibilityForm->action, $url), $fields, $url);
-
-        $eligibility = new EligibilityResultParser($result);
-
-        //file_put_contents('runtime/eligibility.html', $result);
-
-        return $this->render('result', [
-            'eligibility' => $eligibility,
-
-            'medicaid' => $medicaid,
-            'fromDate' => $fromDateOriginal,
-            'toDate' => $toDateOriginal,
+        return $this->renderPartial('_print', [
+            'title' => $title,
+            'content' => $content,
         ]);
     }
 
-    public static function realDelete(string $path): bool
+    #[Permission(['@'])]
+    public function actionLoadPrint(): array
     {
-        if (is_link($path) || is_file($path)) {
-            return unlink($path);
-        }
+        $medicaid = App::$request->get('medicaid_id');
+        $fromDateOriginal = App::$request->get('from_date');
+        $toDateOriginal = App::$request->get('to_date');
 
-        if (!is_dir($path)) {
-            return false;
-        }
+        $time = time();
 
-        $objects = scandir($path);
-        $ok = true;
-        foreach ($objects as $file) {
-            if (in_array($file, ['.', '..', 'System Volume Information', '$RECYCLE.BIN'])) continue;
-            $ok = $ok && self::realDelete($path . DIRECTORY_SEPARATOR . $file);
-        }
-        return $ok && rmdir($path);
+        $token = JwtService::encode([
+            'iss' => App::$config['name'],
+            'iat' => $time,
+            'exp' => $time + 3600,
+
+            'medicaid_id' => $medicaid,
+            'from_date' => $fromDateOriginal,
+            'to_date' => $toDateOriginal,
+        ]);
+
+        return MyEasyAjax::instance()
+            ->openWindow(Url::to("eligibility/print/$token"))
+            ->payload();
     }
 
     /**
+     * @throws DateMalformedStringException
+     * @throws BadRequestHttpException
      * @throws ServerErrorHttpException
-     * @throws \DateMalformedStringException
      */
-    public function actionSearchMedicaid(string $medicaid): string
+    private function monthlyResults(string $medicaid_id): array
     {
+        $client = new HttpClient('runtime/cookies/session.cookie');
+
+        $page = PageAnalyzer::eligibilityPage($client);
+
         $today = new DateTimeImmutable('today');
+        $minusYear = $today->modify('-1 year');
 
         $monthlyResults = [];
 
-        // load http
-        $client = new HttpClient('runtime/cookies/session.cookie');
-
-        $url = 'https://portal.flmmis.com/FLPortal/Eligibility/tabId/68/Default.aspx';
-
-        $html = $client->get($url);
-
-        $analyzer = new PageAnalyzer($html);
-
-        $analysis = $analyzer->analyze($client->url());
-
-        if ($analysis->state == PageState::LOGIN) {
-            echo "LOGIN detected." . PHP_EOL;
-
-            $form = new GenericForm($html);
-
-            $fields = $form->login(App::$config['medicaid']['username'], App::$config['medicaid']['password']);
-
-            $html = $client->postReferer("https://sso.flmmis.com" . $form->action, $fields, $client->url());
-
-            $analysis = $analyzer->analyze($client->url());
-        }
-
-        if ($analysis->state == PageState::SAML_POST) {
-            echo "SAML POST detected." . PHP_EOL;
-
-            $samlUrl = PageAnalyzer::absoluteUrl($analysis->form->action, $client->url());
-
-            $html = $client->postReferer($samlUrl, $analysis->form->fields, $client->url());
-
-            $analysis = $analyzer->analyze($client->url());
-        }
-
-        if ($analysis->state == PageState::SESSION_EXPIRED) {
-            if (@unlink('runtime/cookies/session.cookie')) {
-                die('Session expired. Cookie deleted. Reload page.');
-            }
-
-            die('Session expired. Cookie not deleted. Reload page.');
-        }
-
-        if ($analysis->state == PageState::CAPTCHA) {
-            file_put_contents('runtime/captcha.html', $html);
-            die('Captcha.');
-        }
-
-        if ($analysis->state != PageState::ELIGIBILITY) {
-            file_put_contents('runtime/no-eligibility.html', $html);
-
-            echo "STATUS: " . $analysis->state->value . " detected." . PHP_EOL;
-            die();
-//            return [];
-        }
-
-        for ($i = 11; $i >= 0; $i--) { // 12 // 11
-
+        for ($i = 12; $i >= 0; $i--) {
             $month = $today->modify("-$i months");
 
             $fromDate = $month->modify('first day of this month');
@@ -212,63 +207,34 @@ class EligibilityController extends Controller
                 $toDate = $today;
             }
 
+            if ($fromDate < $minusYear) {
+                $fromDate = $minusYear;
+            }
+
             $from = $fromDate->format('m/d/Y');
             $to = $toDate->format('m/d/Y');
+
+            $eligibility = $page->postSearch($client, $medicaid_id, $from, $to)->parse();
 
             $monthlyResults[] = [
                 'month' => $month->format('F Y'),
                 'from' => $from,
                 'to' => $to,
-                'result' => $this->search($client, $html, $medicaid, $from, $to),
+
+                'from_date' => $fromDate->format('Y-m-d'),
+                'to_date' => $toDate->format('Y-m-d'),
+
+                'eligibility' => [
+                    'status' => $eligibility->hmo['status'],
+                    'type' => $eligibility->hmo['type'],
+                ],
+                'benefit_plans' => $eligibility->listBenefitPlan,
+                'managed_care' => $eligibility->listManagedCare,
+                'tpl' => $eligibility->listTPL,
             ];
         }
 
-        return $this->render('searchMedicaid', [
-            'monthlyResults' => $monthlyResults,
-        ]);
-    }
-
-    private function search(HttpClient $client, string $html, string $medicaidId, string $from, string $to): array
-    {
-        $eligibilityForm = new GenericForm($html);
-
-        $fields = $eligibilityForm->eligibilityWithSearchCriteria($medicaidId, $from, $to);
-
-        $result = $client->postReferer(PageAnalyzer::absoluteUrl($eligibilityForm->action, $client->url()), $fields, $client->url());
-
-        $eligibility = new EligibilityResultParser($result);
-
-        return [
-            'eligibility' => [
-                'status' => $eligibility->hmo['status'],
-                'type' => $eligibility->hmo['type'],
-            ],
-            'benefit_plans' => $eligibility->listBenefitPlan,
-            'managed_care' => $eligibility->listManagedCare,
-            'tpl' => $eligibility->listTPL,
-        ];
-    }
-
-    private function loginFLMedicaid(HttpClient $client, GenericForm $form): PageAnalysis
-    {
-        $fields = $form->login(App::$config['medicaid']['username'], App::$config['medicaid']['password']);
-
-        $html = $client->postReferer("https://sso.flmmis.com" . $form->action, $fields, $client->url());
-
-        $analyzer = new PageAnalyzer($html);
-
-        return $analyzer->analyze($client->url());
-    }
-
-    private function processSaml(HttpClient $client, GenericForm $form): PageAnalysis
-    {
-        $samlUrl = PageAnalyzer::absoluteUrl($form->action, $client->url());
-
-        $html = $client->postReferer($samlUrl, $form->fields, $client->url());
-
-        $analyzer = new PageAnalyzer($html);
-
-        return $analyzer->analyze($client->url());
+        return [$monthlyResults, $eligibility];
     }
 
 }

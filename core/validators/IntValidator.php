@@ -7,9 +7,9 @@ namespace app\core\validators;
 final class IntValidator extends AbstractValidator
 {
 
-    protected string $message = 'Field must be an integer.';
+    public string $message = 'Field must be an integer.';
 
-    public function validate(mixed $value, array $params = []): bool
+    public function validate(mixed $value): bool
     {
         return is_int($value) || is_string($value) && preg_match('/^-?\d+$/', $value);
     }

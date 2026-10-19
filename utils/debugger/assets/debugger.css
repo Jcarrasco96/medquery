@@ -1,0 +1,168 @@
+:root {
+    --debug-bg: #181a20;
+    --debug-color: #e4e7ef;
+    --debug-bg-header: #252832;
+    --debug-color-header-title: #91aaff;
+    --debug-color-header-subtle: #9299aa;
+    --debug-primary-border-color: #6c8cff;
+    --debug-bg-button: #343846;
+    --debug-color-button-active: #1d242c;
+}
+
+#my-debugger {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 99999;
+    background: var(--debug-bg);
+    color: var(--debug-color);
+    font: 13px/1.5 Consolas, monospace;
+    box-shadow: 0 -3px 15px rgb(0 0 0 / 25%);
+}
+
+#my-debugger * {
+    box-sizing: border-box;
+}
+
+.my-debugger-header {
+    height: 38px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 3px 0 8px;
+    background: var(--debug-bg-header);
+    border-top: 2px solid var(--debug-primary-border-color);
+}
+
+.my-debugger-header strong {
+    color: var(--debug-color-header-title);
+}
+
+.my-debugger-header span {
+    color: var(--debug-color-header-subtle);
+}
+
+.my-debugger-header button {
+    margin-left: auto;
+}
+
+#my-debugger button {
+    cursor: pointer;
+    color: inherit;
+    background: var(--debug-bg-button);
+    border: 0;
+    border-radius: 3px;
+    padding: 5px 10px;
+}
+
+#my-debugger button:hover {
+    background: var(--debug-color-button-active);
+}
+
+#my-debugger button.active {
+    cursor: pointer;
+    border: 0;
+    border-radius: 3px;
+    padding: 5px 10px;
+    background: var(--debug-primary-border-color);
+    color: var(--debug-color-button-active);
+}
+
+#my-debugger button.active:hover {
+    background: var(--debug-color-header-title);
+    color: var(--debug-bg-button);
+}
+
+.my-debugger-content {
+    height: 380px;
+    display: flex;
+    flex-direction: column;
+}
+
+.my-debugger-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 8px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--debug-bg-button);
+}
+
+.my-debugger-panel {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 12px;
+}
+
+.my-debugger-panel.active {
+    display: block;
+}
+
+.my-debugger-panel pre {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+#my-debugger.collapsed .my-debugger-content {
+    display: none;
+}
+
+@media (max-width: 600px) {
+    .my-debugger-content {
+        height: 20vh;
+    }
+}
+
+#my-debugger-open {
+    display: none;
+    position: fixed;
+    right: 10px;
+    bottom: 10px;
+    z-index: 100000;
+    padding: 10px;
+    color: var(--debug-color);
+    font: 13px Consolas, monospace;
+    cursor: pointer;
+    box-shadow: 0 3px 12px rgb(0 0 0 / 30%);
+    background: var(--debug-bg-button);
+    border: 0;
+    border-radius: 3px;
+}
+
+#my-debugger-open:hover {
+    background: var(--debug-color-button-active);
+}
+
+#my-debugger.collapsed {
+    display: none;
+}
+
+#my-debugger.collapsed + #my-debugger-open {
+    display: block;
+}
+
+.my-debugger-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.my-debugger-table td {
+    padding: 5px 8px;
+    border: 1px solid var(--debug-color-header-subtle);
+    vertical-align: top;
+    overflow-wrap: anywhere;
+}
+
+.my-debugger-table > tbody > tr > td:first-child {
+    width: 30%;
+    color: var(--debug-primary-border-color);
+    font-weight: 600;
+}
+
+.my-debugger-table .my-debugger-table {
+    background: var(--debug-color-button-active);
+}

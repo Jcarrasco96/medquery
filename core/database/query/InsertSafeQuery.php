@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace app\core\database\query;
 
-class InsertSafeQuery extends SafeQuery
+final class InsertSafeQuery extends SafeQuery
 {
 
     public function execute(): bool
@@ -26,7 +26,9 @@ class InsertSafeQuery extends SafeQuery
             $stmt->bindValue($key, $val);
         }
 
-        return $stmt->execute();
+        $stmt->execute();
+
+        return $stmt->rowCount() > 0;
     }
 
 }

@@ -7,16 +7,18 @@ namespace app\core\validators;
 abstract class AbstractValidator implements ValidatorInterface
 {
 
-    protected string $message = 'Invalid value';
+    public string $message = 'Invalid value' {
+        get {
+            return $this->message;
+        }
+        set {
+            $this->message = $value;
+        }
+    }
 
     public function getMessage(): string
     {
         return $this->message;
-    }
-
-    public function setMessage(string $message): void
-    {
-        $this->message = $message;
     }
 
 }

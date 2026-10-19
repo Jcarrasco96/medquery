@@ -122,7 +122,7 @@ final class Request
         if (function_exists('getallheaders')) {
             $headers = getallheaders();
 
-            if ($headers !== false) {
+            if ($headers) {
                 return $headers;
             }
         }
@@ -133,15 +133,10 @@ final class Request
             /** @var string $name */
 
             if ((str_starts_with($name, 'HTTP_')) || ($name == 'CONTENT_TYPE') || ($name == 'CONTENT_LENGTH')) {
-                $words = substr($name, 5)
-                        |> (fn($x) => str_replace('_', ' ', $x))
-                        |> strtolower(...)
-                        |> ucwords(...);
+                $words = ucwords(strtolower(str_replace('_', ' ', substr($name, 5))));
                 $str_replace = str_replace([' ', 'Http'], ['-', 'HTTP'], $words);
 
-                if (is_string($str_replace)) {
-                    $headers[$str_replace] = $value;
-                }
+                $headers[$str_replace] = $value;
             }
         }
 

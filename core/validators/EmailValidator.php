@@ -7,11 +7,9 @@ namespace app\core\validators;
 final class EmailValidator extends AbstractValidator
 {
 
-    public function __construct(protected string $message = 'Email format is not valid.')
-    {
-    }
+    public string $message = 'Email format is not valid.';
 
-    public function validate(mixed $value, array $params = []): bool
+    public function validate(mixed $value): bool
     {
         return is_string($value) && filter_var($value, FILTER_VALIDATE_EMAIL);
     }

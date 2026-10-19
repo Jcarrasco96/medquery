@@ -4,23 +4,23 @@ declare(strict_types=1);
 
 namespace app\core\helpers;
 
-class Html
+final class Html
 {
 
     public static function css(string $css): string
     {
-        if (APP_ENV === 'prod') {
-            $css = preg_replace('/\.css$/i', '.min.css', $css);
-        }
+//        if (APP_ENV === 'prod') {
+//            $css = preg_replace('/\.css$/i', '.min.css', $css);
+//        }
 
         return '<link href="' . Url::to('assets/css/' . $css) . '" rel="stylesheet">' . "\n";
     }
 
     public static function js(string $js): string
     {
-        if (APP_ENV === 'prod') {
-            $js = preg_replace('/\.js$/i', '.min.js', $js);
-        }
+//        if (APP_ENV === 'prod') {
+//            $js = preg_replace('/\.js$/i', '.min.js', $js);
+//        }
 
         return '<script src="' . Url::to('assets/js/' . $js) . '"></script>' . "\n";
     }

@@ -14,7 +14,7 @@ use ReflectionNamedType;
 use ReflectionProperty;
 use ReflectionUnionType;
 
-abstract class Model
+abstract class Model implements ModelError
 {
 
     protected array $attributes = [];
@@ -49,11 +49,11 @@ abstract class Model
     {
         $data = get_object_vars($this);
 
-        if (property_exists($this, 'attributes') && isset($this->attributes)) {
-            foreach ($this->attributes as $key => $value) {
-                $data[$key] = $value;
-            }
+//        if (isset($this->attributes)) { // property_exists($this, 'attributes') &&
+        foreach ($this->attributes as $key => $value) {
+            $data[$key] = $value;
         }
+//        }
 
         return $data;
     }
@@ -203,6 +203,11 @@ abstract class Model
     public function addError(string $attribute, string $message): void
     {
         $this->errors[$attribute] = $message;
+    }
+
+    public function clearError(string $attribute): void
+    {
+        unset($this->errors[$attribute]);
     }
 
 }

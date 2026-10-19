@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace app\core;
 
+use app\core\exceptions\ServerErrorHttpException;
 use app\core\services\ExceptionHandler;
 use app\core\services\Logger;
 use app\core\services\Request;
@@ -23,6 +24,7 @@ final class App
         'name' => 'Tracker',
         'version' => '0.1',
         'timezone' => 'America/New_York',
+        'jwt_secret' => '',
     ];
 
     public Router $router;
@@ -36,9 +38,12 @@ final class App
 
     /**
      * @param array<string, string>|array<string, array> $config
+     * @throws ServerErrorHttpException
      */
     public function __construct(array $config = [])
     {
+        self::$startTime = hrtime(true);
+
         defined('APP_ENV') or define('APP_ENV', 'prod');
 
         define('APP_ROOT', getcwd() . DIRECTORY_SEPARATOR);
@@ -53,7 +58,7 @@ final class App
             mkdir(APP_RATE_LIMIT_FOLDER, 0755, true);
         }
 
-        if (APP_ENV === 'dev') {
+        if (APP_ENV == 'dev') {
             error_reporting(E_ALL);
             ini_set('display_errors', 1);
             ini_set('error_log', APP_LOGS_FOLDER . 'error_' . date('Ymd') . '.log');
@@ -68,11 +73,16 @@ final class App
 
         date_default_timezone_set(self::$config['timezone']);
 
-        if (self::$session->_id()) {
-            self::$user = User::findById(self::$session->_id());
+        if (self::$session->_id) {
+            self::$user = User::findById(self::$session->_id);
         }
 
         $this->router = new Router();
+    }
+
+    public static function csrfToken(): string
+    {
+        return '<input type="hidden" name="_csrf_token" value="' . htmlspecialchars(self::$session->_csrf_token) . '">';
     }
 
     /**
@@ -83,5 +93,7 @@ final class App
     {
         $this->router->dispatch();
     }
+
+    public static int $startTime = 0;
 
 }

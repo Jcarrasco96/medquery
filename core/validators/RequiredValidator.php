@@ -7,11 +7,9 @@ namespace app\core\validators;
 final class RequiredValidator extends AbstractValidator
 {
 
-    public function __construct(protected string $message = 'This field is required.')
-    {
-    }
+    public string $message = 'This field is required.';
 
-    public function validate(mixed $value, array $params = []): bool
+    public function validate(mixed $value): bool
     {
         return !(is_null($value) || is_string($value) && trim($value) === '' || is_array($value) && empty($value));
     }

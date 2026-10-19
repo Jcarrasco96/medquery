@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace app\core\database;
+namespace app\core\database\migration;
 
+use InvalidArgumentException;
 use PDO;
 
 abstract class Migration
@@ -19,12 +20,42 @@ abstract class Migration
 
     public function insert(string $table, array $data): void
     {
-        $columns = implode(',', array_keys($data));
+        $columns = array_keys($data);
+        $columnNames = implode(',', array_map(fn(string $column) => "`$column`", $columns));
+
         $placeholders = implode(',', array_fill(0, count($data), '?'));
 
-        $sql = "INSERT INTO $table ($columns) VALUES ($placeholders)";
+        $sql = "INSERT INTO `$table` ($columnNames) VALUES ($placeholders)";
         $stmt = $this->db->prepare($sql);
         $stmt->execute(array_values($data));
+    }
+
+    public function batchInsert(string $table, array $data): void
+    {
+        if (empty($data)) {
+            return;
+        }
+
+        $columns = array_keys($data[0]);
+        $columnNames = implode(',', array_map(fn(string $column) => "`$column`", $columns));
+
+        $rowPlaceholders = '(' . implode(',', array_fill(0, count($columns), '?')) . ')';
+
+        $placeholders = implode(',', array_fill(0, count($data), $rowPlaceholders));
+
+        $values = [];
+
+        foreach ($data as $row) {
+            if (array_keys($row) !== $columns) {
+                throw new InvalidArgumentException( 'All records must have the same columns and in the same order.' );
+            }
+
+            array_push($values, ...array_values($row));
+        }
+
+        $sql = "INSERT INTO `$table` ($columnNames) VALUES $placeholders";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($values);
     }
 
     public function createTable(string $name, callable $callback): void

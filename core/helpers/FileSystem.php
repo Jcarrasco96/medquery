@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace app\core\helpers;
 
-class FileSystem
+final class FileSystem
 {
 
     public static function filesize(float $size): string

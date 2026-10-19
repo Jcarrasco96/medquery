@@ -41,7 +41,7 @@ final class Permission
                     break;
 
                 case '@':
-                    if (App::$session->isAuthenticated()) {
+                    if (App::$session->isAuthenticated) {
                         return true;
                     }
 

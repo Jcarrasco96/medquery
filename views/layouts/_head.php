@@ -8,7 +8,6 @@ use app\core\helpers\Url;
 use app\core\services\Renderer;
 
 ?>
-
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="">
@@ -23,14 +22,14 @@ use app\core\services\Renderer;
 
 <?= Html::icon("img/favicon.ico") ?>
 
-<?= Renderer::renderStyles($styles ?? []) ?>
+<?= Renderer::renderStyles($styles) ?>
 
-<?= Html::css("bootstrap.css") ?>
-<?= Html::css("bootstrap-icons/bootstrap-icons.css") ?>
+<?= Html::css("bootstrap-icons/bootstrap-icons.min.css") ?>
+<?= Html::css("bootstrap.min.css") ?>
 <?= Html::css("animate.css") ?>
 <?= Html::css("preloader.css") ?>
 <?= Html::css("style.css") ?>
 
-<?= Renderer::renderScripts($headScripts ?? []) ?>
+<?= Renderer::renderScripts($headScripts) ?>
 
-<?= Html::js("jquery-3.7.1.js") ?>
+<?= Html::js("jquery-3.7.1.min.js") ?>

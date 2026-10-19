@@ -9,7 +9,6 @@ use app\core\helpers\Html;
 $img = in_array($code, [403, 404, 405]) ? "$code.svg" : '500.svg';
 
 ?>
-
 <div class="container">
     <section class="site-error d-flex align-items-center justify-content-center p-2">
         <div class="d-flex flex-column align-items-center">

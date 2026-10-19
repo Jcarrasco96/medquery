@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace app\core\helpers;
 
-class ArrayHelper
+final class ArrayHelper
 {
 
     public static function merge(array $a, array ...$b)

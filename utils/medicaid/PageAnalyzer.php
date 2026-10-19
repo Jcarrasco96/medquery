@@ -4,67 +4,90 @@ declare(strict_types=1);
 
 namespace app\utils\medicaid;
 
+use app\core\App;
+use app\core\exceptions\BadRequestHttpException;
+use app\core\exceptions\ServerErrorHttpException;
+use app\utils\medicaid\pages\AuthenticatedPage;
+use app\utils\medicaid\pages\CaptchaPage;
+use app\utils\medicaid\pages\DemographicMaintenancePage;
+use app\utils\medicaid\pages\EligibilityPage;
+use app\utils\medicaid\pages\IncorrectCredentialsPage;
+use app\utils\medicaid\pages\PortalLoginPage;
+use app\utils\medicaid\pages\RecipientProcedureLookupPage;
+use app\utils\medicaid\pages\SamlPostPage;
+use app\utils\medicaid\pages\ServiceUnavailablePage;
+use app\utils\medicaid\pages\SessionExpiredPage;
 use DOMElement;
 use RuntimeException;
 
 final readonly class PageAnalyzer
 {
 
-    private DomParser $dom;
+    private const int MAX_ATTEMPTS = 3;
 
-    public function __construct(private string $html)
-    {
-        $this->dom = new DOMParser($html);
-    }
+    private const string URL_PROCEDURE_LOOKUP = 'https://portal.flmmis.com/FLPortal/Claims/Recipient%20Procedure%20Lookup/tabId/146/Default.aspx';
+    private const string URL_ELIGIBILITY = 'https://portal.flmmis.com/FLPortal/Eligibility/tabId/68/Default.aspx';
 
-    public function analyze(string $url): PageAnalysis
+    private static function analyze(string $html): GenericPage
     {
-        if (str_contains($this->html, "Your session has expired.")) {
-            return new PageAnalysis(PageState::SESSION_EXPIRED);
+        if (str_contains($html, "Your session has expired.")) {
+            return new SessionExpiredPage($html);
         }
 
-        if (str_contains($this->html, "Incorrect user ID or password.")) {
-            return new PageAnalysis(PageState::INCORRECT_CREDENTIALS);
+        if (str_contains($html, "Incorrect user ID or password.")) {
+            return new IncorrectCredentialsPage($html);
         }
 
-        $formElement = $this->dom->firstForm();
+        if (str_contains($html, "Service Unavailable")) {
+            return new ServiceUnavailablePage($html);
+        }
+
+        if (str_contains($html, "Demographic Maintenance")) {
+            return new DemographicMaintenancePage($html);
+        }
+
+        $page = new GenericPage($html);
+
+        if (array_key_exists('UserName', $page->fields) && array_key_exists('Password', $page->fields)) {
+            return new PortalLoginPage($html);
+        }
+
+        $formElement = $page->firstForm();
 
         if (!$formElement instanceof DOMElement) {
-            return new PageAnalysis(PageState::AUTHENTICATED);
-        }
-
-        $form = new GenericForm($this->html);
-
-        // LOGIN
-        if (array_key_exists('UserName', $form->fields) && array_key_exists('Password', $form->fields)) {
-            return new PageAnalysis(PageState::LOGIN, $form);
+            return new AuthenticatedPage($html);
         }
 
         // WS-Federation/SAML automatic POST
         if (
             $formElement->getAttribute('name') === 'hiddenform'
-            && array_key_exists('wa', $form->fields)
-            && array_key_exists('wresult', $form->fields)
-            && array_key_exists('wctx', $form->fields)
+            && array_key_exists('wa', $page->fields)
+            && array_key_exists('wresult', $page->fields)
+            && array_key_exists('wctx', $page->fields)
         ) {
-            return new PageAnalysis(PageState::SAML_POST, $form);
+            return new SamlPostPage($html);
         }
 
         // CAPTCHA
-        if (str_contains($this->html, "CaptchaCodeTextBox")) {
-            // id img c_botchallengepage_captchacontrol_CaptchaImage
-            return new PageAnalysis(PageState::CAPTCHA, $form, $this->dom->images());
+        if (str_contains($html, "CaptchaCodeTextBox")) {
+            return new CaptchaPage($html);
         }
 
-        if ($this->dom->isEligibilityPage()) {
-            return new PageAnalysis(PageState::ELIGIBILITY, $form);
+        if ($page->isEligibilityPage()) {
+            return new EligibilityPage($html);
         }
 
-        return new PageAnalysis(PageState::UNKNOWN, $form);
+        if ($page->isRecipientProcedureLookupPage()) {
+            return new RecipientProcedureLookupPage($html);
+        }
+
+        return $page;
     }
 
     public static function absoluteUrl(string $action, string $baseUrl): string
     {
+        $action = urlencode($action);
+
         if (preg_match('~^https?://~i', $action)) {
             return $action;
         }
@@ -94,4 +117,76 @@ final readonly class PageAnalyzer
 
         return $origin . ($directory !== '' ? $directory . '/' : '/') . ltrim($action, '/');
     }
+
+    /**
+     * @throws ServerErrorHttpException
+     * @throws BadRequestHttpException
+     */
+    public static function eligibilityPage(HttpClient $client): EligibilityPage
+    {
+        return self::authenticatedPage($client, self::URL_ELIGIBILITY, EligibilityPage::class);
+    }
+
+    /**
+     * @throws ServerErrorHttpException
+     * @throws BadRequestHttpException
+     */
+    public static function procedureLookupPage(HttpClient $client): RecipientProcedureLookupPage
+    {
+        return self::authenticatedPage($client, self::URL_PROCEDURE_LOOKUP, RecipientProcedureLookupPage::class);
+    }
+
+    /**
+     * @param HttpClient $client
+     * @param string $url
+     * @param class-string<GenericPage> $expectedPage
+     * @return GenericPage|EligibilityPage|RecipientProcedureLookupPage
+     * @throws BadRequestHttpException
+     * @throws ServerErrorHttpException
+     */
+    private static function authenticatedPage(HttpClient $client, string $url, string $expectedPage): GenericPage|EligibilityPage|RecipientProcedureLookupPage {
+        $html = $client->get($url);
+
+        $page = self::analyze($html);
+
+        if ($page instanceof $expectedPage) {
+            return $page;
+        }
+
+        $attempts = 0;
+
+        do {
+            if ($page instanceof ServiceUnavailablePage) {
+                throw new ServerErrorHttpException('Service Unavailable');
+            }
+
+            if ($page instanceof IncorrectCredentialsPage) {
+                throw new BadRequestHttpException('Incorrect portal user ID or password.');
+            }
+
+            if ($page instanceof PortalLoginPage) {
+                $fields = $page->login(App::$config['medicaid']['username'], App::$config['medicaid']['password']);
+
+                $html = $client->post('https://sso.flmmis.com' . $page->action, $fields, $client->url());
+            } elseif ($page instanceof SamlPostPage) {
+                $html = $client->post($page->action, $page->fields);
+            } elseif ($page instanceof SessionExpiredPage) {
+                $client->clearCookies();
+                $client = new HttpClient('runtime/cookies/session.cookie');
+                $html = $client->get($url);
+            } else {
+                $attempts++;
+            }
+
+            if ($attempts > self::MAX_ATTEMPTS) {
+                throw new ServerErrorHttpException('Too many attempts.');
+            }
+
+            $page = self::analyze($html);
+
+        } while (!$page instanceof $expectedPage);
+
+        return $page;
+    }
+
 }

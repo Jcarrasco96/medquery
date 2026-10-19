@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace app\core\database\query;
 
-class UpdateSafeQuery extends SafeQuery
+final class UpdateSafeQuery extends SafeQuery
 {
 
     public function execute(): bool
@@ -28,9 +28,7 @@ class UpdateSafeQuery extends SafeQuery
             $stmt->bindValue($key, $val);
         }
 
-        $stmt->execute();
-
-        return $stmt->rowCount() > 0;
+        return $stmt->execute();
     }
 
 }

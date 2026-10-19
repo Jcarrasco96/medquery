@@ -6,27 +6,17 @@
 
 use app\core\App;
 use app\core\helpers\Html;
-use app\core\helpers\Url;
 use app\core\services\Renderer;
 use app\core\widgets\Alert;
 
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <?php include_once '_head.php'; ?>
     <title><?= Html::encode($pageTitle) ?> - <?= App::$config['name'] ?></title>
-
-    <style>
-        .bg-guest {
-            background: url(<?= Url::to('assets/img/bg_01.jpg') ?>) no-repeat center;
-            background-size: cover;
-        }
-    </style>
 </head>
-<body class="">
-
+<body>
 <main id="content" class="content d-none">
     <?= $content; ?>
 </main>
@@ -34,14 +24,13 @@ use app\core\widgets\Alert;
 <div class="preloader"></div>
 <button type="button" class="btn btn-secondary btn-to-top"><i class="bi bi-caret-up-fill"></i></button>
 
-<?= Renderer::renderScripts($scripts ?? []) ?>
+<?= Renderer::renderScripts($scripts) ?>
 
-<?= Html::js("bootstrap.bundle.js") ?>
+<?= Html::js("bootstrap.bundle.min.js") ?>
 <?= Html::js("index.js") ?>
-<?= Html::js("bootstrap-notify.js") ?>
+<?= Html::js("bootstrap-notify.min.js") ?>
 <?= Html::js("notify.js") ?>
 
 <?= Alert::run() ?>
-
 </body>
 </html>

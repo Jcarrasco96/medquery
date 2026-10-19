@@ -4,40 +4,41 @@ declare(strict_types=1);
 
 namespace app\core\services;
 
-use Exception;
+use app\core\exceptions\ServerErrorHttpException;
 use Random\RandomException;
 
 final class Security
 {
 
     /**
-     * @throws Exception
+     * @throws ServerErrorHttpException
+     * @throws RandomException
      */
     public static function generateRandomString(int $length = 32): string
     {
         if ($length < 1) {
-            throw new Exception('First parameter ($length) must be greater than 0');
+            throw new ServerErrorHttpException('First parameter ($length) must be greater than 0');
         }
 
         return substr(self::base64UrlEncode(self::generateRandomKey($length)), 0, $length);
     }
 
     /**
+     * @throws ServerErrorHttpException
      * @throws RandomException
-     * @throws Exception
      */
     private static function generateRandomKey(int $length = 32): string
     {
         if ($length < 1) {
-            throw new Exception('First parameter ($length) must be greater than 0');
+            throw new ServerErrorHttpException('First parameter ($length) must be greater than 0');
         }
 
         return random_bytes($length);
     }
 
     /**
+     * @throws ServerErrorHttpException
      * @throws RandomException
-     * @throws Exception
      */
     public static function generatePasswordHash(string $password, int $cost = 13): string
     {
@@ -49,19 +50,19 @@ final class Security
         $hash = crypt($password, $salt);
         // strlen() is safe since crypt() returns only ascii
         if (strlen($hash) !== 60) {
-            throw new Exception('Unknown error occurred while generating hash.');
+            throw new ServerErrorHttpException('Unknown error occurred while generating hash.');
         }
 
         return $hash;
     }
 
     /**
-     * @throws Exception
+     * @throws ServerErrorHttpException
      */
     public static function validatePassword(string $password, string $hash): bool
     {
         if (!preg_match('/^\$2[axy]\$(\d\d)\$[.\/0-9A-Za-z]{22}/', $hash, $matches) || $matches[1] < 4 || $matches[1] > 30) {
-            throw new Exception('Hash is invalid.');
+            throw new ServerErrorHttpException('Hash is invalid.');
         }
 
         if (function_exists('password_verify')) {
@@ -78,13 +79,13 @@ final class Security
     }
 
     /**
+     * @throws ServerErrorHttpException
      * @throws RandomException
-     * @throws Exception
      */
     private static function generateSalt(int $cost = 13): string
     {
         if ($cost < 4 || $cost > 31) {
-            throw new Exception('Cost must be between 4 and 31.');
+            throw new ServerErrorHttpException('Cost must be between 4 and 31.');
         }
 
         $rand = self::generateRandomKey(20);
@@ -158,6 +159,7 @@ final class Security
 //                'A' => $uppers[rand(0, strlen($uppers) - 1)],
 //                'a' => $lowers[rand(0, strlen($lowers) - 1)],
                 '-' => '-',
+                default => $pattern[$i],
             };
         }
 

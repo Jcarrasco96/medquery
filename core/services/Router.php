@@ -71,11 +71,6 @@ final class Router
     {
         $method = App::$request->getMethod();
 
-        if ($method === self::ROUTER_OPTIONS) {
-            http_response_code(204);
-            exit;
-        }
-
         $path = App::$request->getPath();
 
         if ($path == '/') {

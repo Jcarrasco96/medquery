@@ -47,7 +47,7 @@ final class ExceptionHandler
             exit();
         }
 
-        try {
+//        try {
             while (ob_get_level() > 0) {
                 ob_end_clean();
             }
@@ -59,9 +59,9 @@ final class ExceptionHandler
             }
 
             echo $renderer->render('error', $params);
-        } catch (Exception) {
-            echo self::format($throwable) . PHP_EOL;
-        }
+//        } catch (Exception) {
+//            echo self::format($throwable) . PHP_EOL;
+//        }
     }
 
     /**

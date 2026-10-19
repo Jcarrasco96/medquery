@@ -6,10 +6,10 @@ namespace app\core\helpers;
 
 use DateTime;
 
-class Date
+final class Date
 {
 
-    public static function getDaysBetween2Dates(DateTime $date1, DateTime $date2, bool $absolute = true): bool|int
+    public static function getDaysBetween2Dates(DateTime $date1, DateTime $date2, bool $absolute = true): int
     {
         $interval = $date2->diff($date1);
         // if we have to take in account the relative position (!$absolute) and the relative position is negative,
@@ -49,7 +49,7 @@ class Date
         return in_array($date, $holidays);
     }
 
-    public static function observed_date(string $holiday): int|string
+    public static function observed_date(string $holiday): string
     {
         $day = date("N", strtotime($holiday));
 
